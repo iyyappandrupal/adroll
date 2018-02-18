@@ -1,0 +1,5 @@
+adroll.admin.config:
+  route_name: adroll.settings
+  title: 'Adroll Settings'
+  description: 'Manage Adroll Settings.'
+  parent: system.admin_config_system

@@ -1,0 +1,7 @@
+adroll.settings:
+  path: '/admin/structure/adroll/settings'
+  defaults:
+    _form: '\Drupal\adroll\Form\adrollSettingsForm'
+    _title: 'Adroll Setting'
+  requirements:
+    _permission: 'administer site configuration'

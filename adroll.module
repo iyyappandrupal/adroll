@@ -1,0 +1,99 @@
+<?php
+
+function adroll_page_attachments(array &$attachments){
+
+  //Add a js code
+  if(_adroll_should_track()){
+  	$config = \Drupal::config('adroll.settings');
+  	$adv_id = $config->get('adroll_adv_id');
+  	$pix_id = $config->get('adroll_pix_id');
+  	$email_id = $config->get('adroll_email');
+  	if($email_id != '')
+  		$email = "adroll_email = '$email_id';";
+  	else
+  		$email = '';
+    $javascript_header = <<<EOD
+			adroll_adv_id = '$adv_id';
+			adroll_pix_id = '$pix_id';
+			/* OPTIONAL: provide email to improve user identification */
+			$email
+			(function () {
+			var _onload = function(){
+			if (document.readyState && !/loaded|complete/.test(document.readyState)){setTimeout(_onload, 10);return}
+			if (!window.__adroll_loaded){__adroll_loaded=true;setTimeout(_onload, 50);return}
+			var scr = document.createElement('script');
+			var host = (('https:'' == document.location.protocol) ? 'https://s.adroll.com' : 'http://a.adroll.com');
+			scr.setAttribute('async', 'true');
+			scr.type = 'text/javascript';
+			scr.src = host + '/j/roundtrip.js';
+			((document.getElementsByTagName('head') || [null])[0] ||
+			document.getElementsByTagName('script')[0].parentNode).appendChild(scr);
+			};
+			if (window.addEventListener) {window.addEventListener('load', _onload, false);}
+			else {window.attachEvent('onload', _onload)}
+			}());
+EOD;
+	  $attachments['#attached']['html_head'][] = [
+	    // The data.
+	    [
+	      // Add a <script> tag.
+	      '#tag' => 'script',
+	      // Add JavaScript to the <script> tag.
+	      '#value' => \Drupal\Core\Render\Markup::create($javascript_header),
+	      // Give weight so it appears after meta tags, etc.
+	      '#weight' => -1,
+	    ],
+
+	    'key'
+	  ];	  
+  }
+}
+
+/**
+ * Decides whether track the user or not.
+ *
+ * @param $account
+ *   A user object containing an array of roles to check
+ * @return boolean
+ *   A decision on if the current user is being tracked by getClicky
+ */
+function _adroll_should_track() {
+	$current_user = \Drupal::currentUser();
+	$roles = $current_user->getRoles();
+	foreach ($roles as $key => $value) {
+		$current_user_roles[$value] = $value;
+	}
+  // Check Adroll is configured
+  $config = \Drupal::config('adroll.settings');
+  $adv_id = $config->get('adroll_adv_id');
+  if (!$adv_id) {
+    return FALSE;
+  }
+
+  // Check admin page
+  $is_admin = \Drupal::service('router.admin_context')->isAdminRoute();
+
+  if ($is_admin) {
+    return FALSE;
+  }
+
+  // Check user role segmentation
+  $roles = array();
+  $allowed_roles = $config->get('adroll_target_roles');
+	foreach ($allowed_roles as $key => $value) {
+		if($value)
+		  $roles[] = $value;
+	}  
+  if (empty($roles)) {
+    return TRUE;
+  }  
+  
+  foreach ($current_user_roles as $key => $role) {
+    if (isset($allowed_roles[$key]) && $allowed_roles[$key])  {
+     return TRUE;
+    }
+  }
+
+  return FALSE;
+}
+?>
